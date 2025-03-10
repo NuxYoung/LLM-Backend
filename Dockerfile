@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 # 设置工作目录
-WORKDIR /app
+WORKDIR /
 
 # 复制项目的依赖文件
 COPY requirements.txt .
@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8000
 
 # 启动FastAPI应用
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
