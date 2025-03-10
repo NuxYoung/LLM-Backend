@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from api import api_router
 from core.config import settings
@@ -6,6 +7,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         debug=settings.debug,
+        root_path=os.getenv("ROOT_PATH", "")
     )
 
     app.include_router(api_router.api_router)

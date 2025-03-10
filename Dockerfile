@@ -9,7 +9,7 @@ COPY requirements.txt .
 # 安装依赖并清理缓存
 RUN pip install --no-cache-dir -r requirements.txt
 
-ENV ROOT_PATH=/fifan-customerservice
+ENV ROOT_PATH=/fifan-llm
 
 # 复制项目文件到工作目录
 COPY . .
