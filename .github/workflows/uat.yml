@@ -1,0 +1,57 @@
+name: FiFan.LLM Docker Image CI
+
+on:
+  push:
+   tags:
+   - 'fifan_llm_v1.*.*'
+
+jobs:
+  build-publish:
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
+    steps:
+    # get current version
+    - name: Get current version
+      id: get_version
+      run: |
+        full_tag=${{ github.ref }}
+        version=${full_tag#*v}
+        echo "version=${version}" >> $GITHUB_OUTPUT
+
+    # build
+    - uses: actions/checkout@v3
+    - name: Build the FiFan.LLM Docker image
+      run: docker build . --tag llm-image:${{ steps.get_version.outputs.version }}
+
+    # publish
+    - name: Login Tencent Container Registry
+      run: |
+        docker login -u ${{ secrets.TCR_USERNAME }} -p '${{ secrets.TCR_PASSWORD }}' uswccr.ccs.tencentyun.com/fifan_test
+
+    - name: Publish docker image into TCR
+      run: |
+        docker tag llm-image:${{ steps.get_version.outputs.version }} uswccr.ccs.tencentyun.com/fifan_test/llm-image:${{ steps.get_version.outputs.version }}
+        docker push uswccr.ccs.tencentyun.com/fifan_test/llm-image:${{ steps.get_version.outputs.version }}
+
+  deploy:
+    needs: build-publish
+    runs-on: ubuntu-latest
+    
+    steps:
+
+    - uses: fifsky/ssh-action@master
+      name: SSH into the server and run Docker commands
+      with:
+        command: |
+          docker login -u ${{ secrets.TCR_USERNAME }} -p ${{ secrets.TCR_PASSWORD }} uswccr.ccs.tencentyun.com/fifan_test
+          docker pull uswccr.ccs.tencentyun.com/fifan_test/llm-image:${{ needs.build-publish.outputs.version }}
+          docker stop fifan-llm
+          docker rm fifan-llm
+          docker run -d --name fifan-llm -p 4003:8000 uswccr.ccs.tencentyun.com/fifan_test/llm-image:${{ needs.build-publish.outputs.version }}
+        host: ${{ secrets.LINUX_IP_UAT }}
+        user: root
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
