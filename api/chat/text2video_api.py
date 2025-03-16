@@ -1,8 +1,11 @@
+from io import BytesIO
 from typing import AsyncGenerator
 import aiohttp
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from services.llms.tongyi_wanxiang_service import TongyiWanxiangService
 from fastapi import APIRouter
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
 import logging
 
 router = APIRouter(prefix="/text2", tags=["text2"])
@@ -60,4 +63,14 @@ async def get_video(url: str):
                 async for chunk in resp.content.iter_chunked(1024 * 1024):  # 1MB chunks
                     yield chunk
 
-    return StreamingResponse(video_generator(), media_type="video/mp4", headers={"Content-Disposition": "attachment; filename=video.mp4"})
+    async def fetch_video_as_stream() -> BytesIO:
+        buffer = BytesIO()  # 创建一个 BytesIO 对象作为缓冲区
+        async for chunk in video_generator():
+            buffer.write(chunk)  # 将每个 chunk 写入缓冲区
+        buffer.seek(0)  # 将指针移动到流的开头
+        return buffer
+    
+    stream = await fetch_video_as_stream()
+    return Tool.create_blob_message(self=Tool, blob=stream, meta={"mime_type": "video/mp4"})
+
+    # return StreamingResponse(video_generator(), media_type="video/mp4", headers={"Content-Disposition": "attachment; filename=video.mp4"})
